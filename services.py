@@ -73,3 +73,20 @@ def chat_about_paper(abstract, user_question):
         contents=prompt,
     )
     return response.text
+def fetch_paper_by_id(paper_id):
+    import arxiv
+    search = arxiv.Search(id_list=[paper_id])
+    try:
+        # Get just this specific paper
+        result = next(arxiv.Client().results(search))
+        return {
+            'id': result.entry_id.split('/')[-1],
+            'title': result.title,
+            'authors': ', '.join([author.name for author in result.authors]),
+            'published': result.published.strftime("%Y-%m-%d"),
+            'summary': result.summary,
+            'abstract': result.summary,
+            'pdf_url': result.pdf_url
+        }
+    except Exception:
+        return None
