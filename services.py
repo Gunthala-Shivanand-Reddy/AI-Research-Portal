@@ -10,22 +10,16 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def fetch_daily_papers():
-    print("1. Starting ArXiv search...")
-    # Add a timeout/retry limit so it doesn't spin forever
     arxiv_client = arxiv.Client(page_size=10, delay_seconds=3, num_retries=1)
     
-    # Absolute simplest query to prevent ArXiv server hangs
     search = arxiv.Search(
-        query="cat:cs.AI", 
+        query="cat:cs.AI",
         max_results=10,
         sort_by=arxiv.SortCriterion.SubmittedDate
     )
     
     papers = []
-    print("2. Fetching results from the internet (waiting on ArXiv)...")
-    
     for result in arxiv_client.results(search):
-        print(f"   -> Found paper: {result.title}")
         papers.append({
             'id': result.entry_id.split('/')[-1],
             'title': result.title,
@@ -34,12 +28,9 @@ def fetch_daily_papers():
             'pdf_url': result.pdf_url,
             'date': result.published.strftime("%Y-%m-%d")
         })
-        
-    print("3. Finished ArXiv search! Sending to website.")
     return papers
 
 def fetch_ai_news():
-    # Pulls the latest AI news from Google News RSS
     feed = feedparser.parse('https://news.google.com/rss/search?q=Artificial+Intelligence&hl=en-US&gl=US&ceid=US:en')
     news = []
     for entry in feed.entries[:15]:
@@ -51,7 +42,6 @@ def fetch_ai_news():
     return news
 
 def analyze_paper_with_ai(abstract):
-    # Asks Gemini to score relevance and explain the paper simply
     prompt = f"""
     You are an AI expert. Analyze this research paper abstract:
     {abstract}
@@ -73,7 +63,6 @@ def analyze_paper_with_ai(abstract):
     return response.text
 
 def chat_about_paper(abstract, user_question):
-    # Answers questions strictly about the paper
     prompt = f"""
     Context: Research Paper Abstract: {abstract}
     User Question: {user_question}
