@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>{{ paper.title }}</h1>
+<a href="{{ paper.pdf_url }}" target="_blank" class="btn">Download Original PDF</a>
+
+<div class="ai-box">
+    <h3>AI Breakdown:</h3>
+    <pre>{{ explanation }}</pre>
+</div>
+
+<div class="chat-box">
+    <h3>Ask a question about this paper:</h3>
+    <input type="text" id="question" placeholder="E.g., What dataset did they use?">
+    <button onclick="askQuestion()" class="btn">Ask</button>
+    <div id="chat-response"></div>
+</div>
+
+<script>
+    function askQuestion() {
+        const question = document.getElementById('question').value;
+        document.getElementById('chat-response').innerText = "AI is thinking...";
+
+        fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paper_id: '{{ paper.id }}', question: question })
+        })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('chat-response').innerText = data.answer;
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Today's AI, ML & Python Papers</h1>
+<div class="paper-list">
+    {% for paper in papers %}
+    <div class="card">
+        <h3>{{ paper.title }}</h3>
+        <p><strong>Authors:</strong> {{ paper.authors }}</p>
+        <p><strong>Published:</strong> {{ paper.date }}</p>
+        <div class="actions">
+            <a href="/paper/{{ paper.id }}" class="btn">Read & AI Explain</a>
+            <a href="{{ paper.pdf_url }}" target="_blank" class="btn btn-outline">Download PDF</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

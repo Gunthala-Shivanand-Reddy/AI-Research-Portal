@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Global AI Updates</h1>
+<div class="paper-list">
+    {% for article in news %}
+    <div class="card">
+        <h3>{{ article.title }}</h3>
+        <p><strong>Published:</strong> {{ article.date }}</p>
+        <a href="{{ article.link }}" target="_blank" class="btn">Read Article</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
