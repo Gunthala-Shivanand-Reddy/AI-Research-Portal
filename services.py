@@ -13,7 +13,7 @@ def fetch_daily_papers():
     arxiv_client = arxiv.Client(page_size=10, delay_seconds=3, num_retries=1)
     
     search = arxiv.Search(
-        query="cat:cs.AI",
+        query='all:"generative ai" OR all:"natural language processing" OR all:"LLM" OR all:"NLP"', 
         max_results=10,
         sort_by=arxiv.SortCriterion.SubmittedDate
     )
@@ -31,7 +31,9 @@ def fetch_daily_papers():
     return papers
 
 def fetch_ai_news():
-    feed = feedparser.parse('https://news.google.com/rss/search?q=Artificial+Intelligence&hl=en-US&gl=US&ceid=US:en')
+    # Updated URL to specifically search for Generative AI and NLP news
+    url = 'https://news.google.com/rss/search?q=%22Generative+AI%22+OR+%22Natural+Language+Processing%22+OR+LLM&hl=en-US&gl=US&ceid=US:en'
+    feed = feedparser.parse(url)
     news = []
     for entry in feed.entries[:15]:
         news.append({
@@ -46,7 +48,7 @@ def analyze_paper_with_ai(abstract):
     You are an AI expert. Analyze this research paper abstract:
     {abstract}
     
-    1. Give a relevance score (0-100%) on how much this relates specifically to AI, Machine Learning, and Python.
+    1. Give a relevance score (0-100%) on how much this relates specifically to Generative AI, Large Language Models, and NLP.
     2. Write a Simple Summary (understandable by a beginner).
     3. Write a Detailed Explanation (for a developer/researcher).
     
@@ -73,6 +75,7 @@ def chat_about_paper(abstract, user_question):
         contents=prompt,
     )
     return response.text
+
 def fetch_paper_by_id(paper_id):
     import arxiv
     search = arxiv.Search(id_list=[paper_id])
