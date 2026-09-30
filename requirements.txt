@@ -4,3 +4,5 @@ arxiv
 feedparser
 python-dotenv
 gunicorn
+supabase
+bcrypt
