@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from datetime import timedelta
 import services
 import database
-import email_utils
 import os
 from dotenv import load_dotenv
 
@@ -11,12 +10,14 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback-secret-key-123")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=10)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # ===== LOGIN GUARD =====
 @app.before_request
 def require_login():
     session.permanent = True
-    allowed = ['login', 'signup', 'verify_otp', 'forgot_password', 'reset_password', 'static']
+    allowed = ['login', 'signup', 'auth_callback', 'verify_token',
+               'forgot_password', 'reset_password', 'update_password', 'static']
     if request.endpoint in allowed:
         return
     if not session.get('logged_in'):
@@ -30,8 +31,6 @@ def add_security_headers(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-
 # ===== AUTH ROUTES =====
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -41,39 +40,33 @@ def signup():
         name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
-
-        existing = database.get_user_by_email(email)
-        if existing:
-            error = "An account with this email already exists."
-        else:
-            try:
-                user, otp = database.create_user(name, email, password)
-                email_utils.send_otp_email(email, otp, purpose="verification")
-                session['pending_email'] = email
-                return redirect(url_for('verify_otp'))
-            except Exception as e:
-                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
-
+        try:
+            database.create_user(name, email, password)
+            return render_template('check_email.html', email=email)
+        except Exception as e:
+            error = f"Error creating account: {str(e)}"
     return render_template('signup.html', error=error)
 
-@app.route('/verify', methods=['GET', 'POST'])
-def verify_otp():
-    error = None
-    email = session.get('pending_email')
-    if not email:
-        return redirect(url_for('login'))
+@app.route('/auth/callback')
+def auth_callback():
+    return render_template('auth_callback.html')
 
-    if request.method == 'POST':
-        otp = request.form.get('otp')
-        if database.verify_user_otp(email, otp):
-            session.pop('pending_email', None)
+@app.route('/auth/verify-token', methods=['POST'])
+def verify_token():
+    data = request.json
+    access_token = data.get('access_token')
+    refresh_token = data.get('refresh_token')
+    try:
+        db = database.get_db()
+        result = db.auth.set_session(access_token, refresh_token)
+        if result.user:
             session['logged_in'] = True
-            session['user_email'] = email
-            return redirect(url_for('dashboard'))
-        else:
-            error = "Incorrect OTP. Please try again."
-
-    return render_template('verify_otp.html', email=email, error=error)
+            session['user_email'] = result.user.email
+            session['user_name'] = result.user.user_metadata.get('name', 'Researcher')
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+    return jsonify({"success": False})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -81,27 +74,20 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = database.get_user_by_email(email)
-
-        if not user:
-            error = "No account found with this email."
-        elif not user['is_verified']:
-            try:
-                otp = email_utils.generate_otp()
-                database.update_user_otp(email, otp)
-                email_utils.send_otp_email(email, otp)
-                session['pending_email'] = email
-                return redirect(url_for('verify_otp'))
-            except Exception as e:
-                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
-        elif not database.check_password(user, password):
-            error = "Incorrect password."
-        else:
+        try:
+            user = database.login_user(email, password)
             session['logged_in'] = True
-            session['user_email'] = email
-            session['user_name'] = user['name']
+            session['user_email'] = user.email
+            session['user_name'] = user.user_metadata.get('name', 'Researcher')
             return redirect(url_for('dashboard'))
-
+        except Exception as e:
+            error_msg = str(e)
+            if "Email not confirmed" in error_msg:
+                error = "Please verify your email first. Check your inbox for the verification link!"
+            elif "Invalid login credentials" in error_msg:
+                error = "Incorrect email or password."
+            else:
+                error = f"Login error: {error_msg}"
     return render_template('login.html', error=error)
 
 @app.route('/logout')
@@ -115,39 +101,30 @@ def forgot_password():
     success = None
     if request.method == 'POST':
         email = request.form.get('email')
-        user = database.get_user_by_email(email)
-        if not user:
-            error = "No account found with this email."
-        else:
-            try:
-                otp = email_utils.generate_otp()
-                database.update_user_otp(email, otp)
-                email_utils.send_otp_email(email, otp, purpose="reset")
-                session['reset_email'] = email
-                return redirect(url_for('reset_password'))
-            except Exception as e:
-                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
-
+        try:
+            database.send_password_reset(email)
+            success = "Password reset link sent! Check your email inbox."
+        except Exception as e:
+            error = f"Error: {str(e)}"
     return render_template('forgot_password.html', error=error, success=success)
 
-@app.route('/reset-password', methods=['GET', 'POST'])
+@app.route('/reset-password')
 def reset_password():
-    error = None
-    email = session.get('reset_email')
-    if not email:
-        return redirect(url_for('forgot_password'))
+    return render_template('reset_password.html')
 
-    if request.method == 'POST':
-        otp = request.form.get('otp')
-        new_password = request.form.get('password')
-        if database.verify_user_otp(email, otp):
-            database.update_user_password(email, new_password)
-            session.pop('reset_email', None)
-            return redirect(url_for('login'))
-        else:
-            error = "Incorrect OTP. Please try again."
-
-    return render_template('reset_password.html', error=error)
+@app.route('/auth/update-password', methods=['POST'])
+def update_password():
+    data = request.json
+    access_token = data.get('access_token')
+    refresh_token = data.get('refresh_token')
+    new_password = data.get('password')
+    try:
+        db = database.get_db()
+        db.auth.set_session(access_token, refresh_token)
+        db.auth.update_user({"password": new_password})
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 # ===== MAIN ROUTES =====
 papers_db = {}
@@ -173,12 +150,10 @@ def view_paper(paper_id):
         if not paper:
             return "Paper not found", 404
         papers_db[paper_id] = paper
-
     try:
         explanation = services.analyze_paper_with_ai(paper['abstract'])
     except Exception:
         explanation = "AI is currently busy. Please refresh the page to try again."
-
     return render_template('paper.html', paper=paper, explanation=explanation)
 
 @app.route('/chat', methods=['POST'])

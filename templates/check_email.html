@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Check Your Email - AI Research Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #0f172a;
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            width: 380px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-card">
+        <div style="font-size: 3rem;">📧</div>
+        <h2 style="color: #2563eb;">Check Your Email!</h2>
+        <p>We sent a verification link to:</p>
+        <p style="color: #2563eb; font-weight: 600; font-size: 1.1rem;">{{ email }}</p>
+        <p style="color: #6b7280;">Click the link in your email to verify your account and start using the AI Research
+            Portal!</p>
+        <p style="color: #999; font-size: 0.85rem;">Don't see it? Check your spam/junk folder.</p>
+        <br>
+        <a href="/login" style="color: #2563eb; text-decoration: none; font-weight: 600;">Already verified? Login here
+            →</a>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Verifying... - AI Research Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #0f172a;
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            width: 380px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-card">
+        <div style="font-size: 3rem;" id="icon">⏳</div>
+        <h2 style="color: #2563eb;" id="title">Verifying your email...</h2>
+        <p id="message">Please wait a moment.</p>
+        <a href="/login" id="loginLink"
+            style="display:none; color: #2563eb; text-decoration: none; font-weight: 600;">Go to Login →</a>
+    </div>
+    <script>
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        if (accessToken) {
+            fetch('/auth/verify-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('icon').innerText = '✅';
+                        document.getElementById('title').innerText = 'Email Verified!';
+                        document.getElementById('message').innerText = 'Redirecting you to the portal...';
+                        setTimeout(() => window.location.href = '/', 2000);
+                    } else {
+                        document.getElementById('icon').innerText = '❌';
+                        document.getElementById('title').innerText = 'Verification Failed';
+                        document.getElementById('message').innerText = 'The link may have expired. Please sign up again.';
+                        document.getElementById('loginLink').style.display = 'block';
+                    }
+                });
+        } else {
+            document.getElementById('icon').innerText = '❌';
+            document.getElementById('title').innerText = 'Invalid Link';
+            document.getElementById('message').innerText = 'This link is not valid. Please try signing up again.';
+            document.getElementById('loginLink').style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
