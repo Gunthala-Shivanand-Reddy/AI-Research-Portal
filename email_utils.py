@@ -46,7 +46,9 @@ def send_otp_email(to_email, otp, purpose="verification"):
 
     msg.attach(MIMEText(body, 'html'))
 
-    # timeout=10 prevents the website from hanging forever!
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
+    # Switched to Port 587 (Modern TLS) which fixes the "Network Unreachable" IPv6 bug!
+    with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
+        server.ehlo()
+        server.starttls()
         server.login(from_email, password)
         server.send_message(msg)
