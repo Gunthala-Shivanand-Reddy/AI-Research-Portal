@@ -15,6 +15,9 @@ def send_otp_email(to_email, otp, purpose="verification"):
     from_email = os.getenv("EMAIL_ADDRESS")
     password = os.getenv("EMAIL_PASSWORD")
 
+    if not from_email or not password:
+        raise ValueError("EMAIL_ADDRESS or EMAIL_PASSWORD missing from Render variables!")
+
     msg = MIMEMultipart()
     msg['From'] = from_email
     msg['To'] = to_email
@@ -43,6 +46,7 @@ def send_otp_email(to_email, otp, purpose="verification"):
 
     msg.attach(MIMEText(body, 'html'))
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+    # timeout=10 prevents the website from hanging forever!
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
         server.login(from_email, password)
         server.send_message(msg)

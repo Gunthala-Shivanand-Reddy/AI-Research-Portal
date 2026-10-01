@@ -1,17 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My AI Research Portal</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
     <nav>
-        <h2>My AI Research Portal</h2>
+        <h2>🧠 My AI Research Portal</h2>
         <div>
+            {% if session.get('logged_in') %}
             <a href="/">Research Papers</a>
             <a href="/news">AI Updates</a>
+            <a href="/logout"
+                style="color: #f87171; border: 1px solid #f87171; padding: 5px 10px; border-radius: 5px; margin-left: 20px;">Logout</a>
+            {% else %}
+            <a href="/login">Login</a>
+            <a href="/signup">Sign Up</a>
+            {% endif %}
         </div>
     </nav>
     <div class="container">

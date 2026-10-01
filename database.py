@@ -7,12 +7,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+def get_db():
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    if not url or not key:
+        raise ValueError("Missing SUPABASE_URL or SUPABASE_KEY. Check Render Dashboard!")
+    return create_client(url, key)
 
 def create_user(name, email, password):
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     otp = ''.join(random.choices(string.digits, k=6))
-    result = supabase.table('users').insert({
+    result = get_db().table('users').insert({
         'name': name,
         'email': email,
         'password_hash': password_hash,
@@ -22,7 +27,7 @@ def create_user(name, email, password):
     return result.data[0], otp
 
 def get_user_by_email(email):
-    result = supabase.table('users').select('*').eq('email', email).execute()
+    result = get_db().table('users').select('*').eq('email', email).execute()
     if result.data:
         return result.data[0]
     return None
@@ -30,7 +35,7 @@ def get_user_by_email(email):
 def verify_user_otp(email, otp):
     user = get_user_by_email(email)
     if user and user['otp_code'] == otp:
-        supabase.table('users').update({
+        get_db().table('users').update({
             'is_verified': True,
             'otp_code': None
         }).eq('email', email).execute()
@@ -38,11 +43,11 @@ def verify_user_otp(email, otp):
     return False
 
 def update_user_otp(email, otp):
-    supabase.table('users').update({'otp_code': otp}).eq('email', email).execute()
+    get_db().table('users').update({'otp_code': otp}).eq('email', email).execute()
 
 def update_user_password(email, new_password):
     password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    supabase.table('users').update({'password_hash': password_hash}).eq('email', email).execute()
+    get_db().table('users').update({'password_hash': password_hash}).eq('email', email).execute()
 
 def check_password(user, password):
     return bcrypt.checkpw(password.encode(), user['password_hash'].encode())

@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Setup Gemini AI
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Safe getter for Gemini Client so the server doesn't crash on startup!
+def get_gemini_client():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("Missing GEMINI_API_KEY. Check Render Dashboard!")
+    return genai.Client(api_key=api_key)
 
 def fetch_daily_papers():
     arxiv_client = arxiv.Client(page_size=10, delay_seconds=3, num_retries=1)
@@ -44,6 +48,7 @@ def fetch_ai_news():
     return news
 
 def analyze_paper_with_ai(abstract):
+    client = get_gemini_client()
     prompt = f"""
     You are an AI expert. Analyze this research paper abstract:
     {abstract}
@@ -65,6 +70,7 @@ def analyze_paper_with_ai(abstract):
     return response.text
 
 def chat_about_paper(abstract, user_question):
+    client = get_gemini_client()
     prompt = f"""
     Context: Research Paper Abstract: {abstract}
     User Question: {user_question}
@@ -86,8 +92,7 @@ def fetch_paper_by_id(paper_id):
             'id': result.entry_id.split('/')[-1],
             'title': result.title,
             'authors': ', '.join([author.name for author in result.authors]),
-            'published': result.published.strftime("%Y-%m-%d"),
-            'summary': result.summary,
+            'date': result.published.strftime("%Y-%m-%d"),
             'abstract': result.summary,
             'pdf_url': result.pdf_url
         }

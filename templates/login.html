@@ -117,7 +117,7 @@
         <p class="error">{{ error }}</p>
         {% endif %}
 
-        <form method="POST">
+        <form method="POST" id="loginForm">
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
@@ -127,13 +127,22 @@
                 <input type="password" name="password" placeholder="Enter your password" required>
             </div>
             <div class="forgot"><a href="/forgot-password">Forgot password?</a></div>
-            <button type="submit" class="btn-full">Login</button>
+            <button type="submit" class="btn-full" id="loginBtn">Login</button>
         </form>
 
         <div class="link-text">
             Don't have an account? <a href="/signup">Sign up here</a>
         </div>
     </div>
+
+    <script>
+        // Changes the button text so users know they need to wait for the email!
+        document.getElementById("loginForm").onsubmit = function () {
+            var btn = document.getElementById("loginBtn");
+            btn.innerHTML = "Sending OTP... Please wait ⏳";
+            btn.style.opacity = "0.7";
+        };
+    </script>
 </body>
 
 </html>

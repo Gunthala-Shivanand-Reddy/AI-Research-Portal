@@ -101,7 +101,7 @@
         <p class="error">{{ error }}</p>
         {% endif %}
 
-        <form method="POST">
+        <form method="POST" id="signupForm">
             <div class="form-group">
                 <label>Full Name</label>
                 <input type="text" name="name" placeholder="Enter your name" required>
@@ -114,13 +114,21 @@
                 <label>Password</label>
                 <input type="password" name="password" placeholder="Create a password" required minlength="6">
             </div>
-            <button type="submit" class="btn-full">Create Account & Send OTP</button>
+            <button type="submit" class="btn-full" id="signupBtn">Create Account & Send OTP</button>
         </form>
 
         <div class="link-text">
             Already have an account? <a href="/login">Login here</a>
         </div>
     </div>
+
+    <script>
+        document.getElementById("signupForm").onsubmit = function () {
+            var btn = document.getElementById("signupBtn");
+            btn.innerHTML = "Sending OTP... Please wait ⏳";
+            btn.style.opacity = "0.7";
+        };
+    </script>
 </body>
 
 </html>

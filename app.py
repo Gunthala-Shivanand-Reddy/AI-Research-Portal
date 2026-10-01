@@ -52,7 +52,7 @@ def signup():
                 session['pending_email'] = email
                 return redirect(url_for('verify_otp'))
             except Exception as e:
-                error = f"Error creating account: {str(e)}"
+                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
 
     return render_template('signup.html', error=error)
 
@@ -86,11 +86,14 @@ def login():
         if not user:
             error = "No account found with this email."
         elif not user['is_verified']:
-            otp = email_utils.generate_otp()
-            database.update_user_otp(email, otp)
-            email_utils.send_otp_email(email, otp)
-            session['pending_email'] = email
-            return redirect(url_for('verify_otp'))
+            try:
+                otp = email_utils.generate_otp()
+                database.update_user_otp(email, otp)
+                email_utils.send_otp_email(email, otp)
+                session['pending_email'] = email
+                return redirect(url_for('verify_otp'))
+            except Exception as e:
+                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
         elif not database.check_password(user, password):
             error = "Incorrect password."
         else:
@@ -116,11 +119,14 @@ def forgot_password():
         if not user:
             error = "No account found with this email."
         else:
-            otp = email_utils.generate_otp()
-            database.update_user_otp(email, otp)
-            email_utils.send_otp_email(email, otp, purpose="reset")
-            session['reset_email'] = email
-            return redirect(url_for('reset_password'))
+            try:
+                otp = email_utils.generate_otp()
+                database.update_user_otp(email, otp)
+                email_utils.send_otp_email(email, otp, purpose="reset")
+                session['reset_email'] = email
+                return redirect(url_for('reset_password'))
+            except Exception as e:
+                error = f"Error sending email. Please check your Gmail App Password. Detail: {str(e)}"
 
     return render_template('forgot_password.html', error=error, success=success)
 
