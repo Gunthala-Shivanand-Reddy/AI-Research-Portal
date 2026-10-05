@@ -1,41 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
     <title>Check Your Email - AI Research Portal</title>
-    <link rel="stylesheet" href="/static/style.css">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0f1e;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: #0f172a;
+            overflow: hidden;
+            color: #e2e8f0;
+        }
+
+        .bg-orbs {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #6366f1, transparent);
+            top: -150px;
+            left: -150px;
+            opacity: 0.2;
+            animation: f1 18s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #06b6d4, transparent);
+            bottom: -100px;
+            right: -100px;
+            opacity: 0.15;
+            animation: f2 22s ease-in-out infinite;
+        }
+
+        @keyframes f1 {
+
+            0%,
+            100% {
+                transform: translate(0, 0)
+            }
+
+            50% {
+                transform: translate(50px, 40px)
+            }
+        }
+
+        @keyframes f2 {
+
+            0%,
+            100% {
+                transform: translate(0, 0)
+            }
+
+            50% {
+                transform: translate(-50px, -40px)
+            }
         }
 
         .auth-card {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            width: 380px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 45px 40px;
+            border-radius: 20px;
+            width: 420px;
+            position: relative;
+            z-index: 1;
             text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-10px)
+            }
+        }
+
+        h2 {
+            background: linear-gradient(135deg, #818cf8, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.6rem;
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: #94a3b8;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .email-highlight {
+            color: #818cf8;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .hint {
+            font-size: 0.82rem;
+            color: #475569;
+            margin-top: 16px;
+        }
+
+        a {
+            color: #818cf8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover {
+            color: #a78bfa;
         }
     </style>
 </head>
 
 <body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
     <div class="auth-card">
-        <div style="font-size: 3rem;">📧</div>
-        <h2 style="color: #2563eb;">Check Your Email!</h2>
+        <div class="icon">📧</div>
+        <h2>Check Your Email!</h2>
         <p>We sent a verification link to:</p>
-        <p style="color: #2563eb; font-weight: 600; font-size: 1.1rem;">{{ email }}</p>
-        <p style="color: #6b7280;">Click the link in your email to verify your account and start using the AI Research
-            Portal!</p>
-        <p style="color: #999; font-size: 0.85rem;">Don't see it? Check your spam/junk folder.</p>
+        <p class="email-highlight">{{ email }}</p>
+        <p>Click the link in your email to verify your account and start exploring AI research papers!</p>
+        <p class="hint">🔍 Don't see it? Check your spam or junk folder.</p>
         <br>
-        <a href="/login" style="color: #2563eb; text-decoration: none; font-weight: 600;">Already verified? Login here
-            →</a>
+        <a href="/login">Already verified? Login here →</a>
     </div>
 </body>
 

@@ -1,17 +1,23 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<h1>Welcome, {{ user_name }}! 👋</h1>
-<p style="color: #64748b; margin-top: -20px; margin-bottom: 30px;">Today's top Generative AI & NLP Papers</p>
+<div style="margin-bottom: 30px;">
+    <p style="color: var(--accent); font-weight: 600; margin-bottom: 4px;">Welcome back, {{ user_name }}! 👋</p>
+    <h1
+        style="margin-top: 0; font-size: 2.2rem; background: linear-gradient(135deg, #e2e8f0, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Today's Top AI Research</h1>
+</div>
 
 <div class="paper-list">
     {% for paper in papers %}
     <div class="card">
         <h3>{{ paper.title }}</h3>
-        <p><strong>Authors:</strong> {{ paper.authors }}</p>
+        <p><strong>Authors:</strong> <span style="color: #a5b4fc;">{{ paper.authors }}</span></p>
         <p><strong>Published:</strong> {{ paper.date }}</p>
+        <p style="margin-top: 15px; color: var(--text-main);">{{ paper.abstract[:250] }}...</p>
+
         <div class="actions">
-            <a href="/paper/{{ paper.id }}" class="btn">Read & AI Explain</a>
-            <a href="{{ paper.pdf_url }}" target="_blank" class="btn btn-outline">Download PDF</a>
+            <a href="/paper/{{ paper.id }}" class="btn">Read & AI Explain ✨</a>
+            <a href="{{ paper.pdf_url }}" target="_blank" class="btn btn-outline">PDF</a>
         </div>
     </div>
     {% endfor %}

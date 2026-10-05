@@ -1,12 +1,22 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<h1>Global AI Updates</h1>
+<div style="margin-bottom: 30px;">
+    <h1
+        style="margin-top: 0; font-size: 2.2rem; background: linear-gradient(135deg, #e2e8f0, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Latest AI News</h1>
+    <p style="color: var(--text-muted);">Stay updated with the newest advancements in Artificial Intelligence.</p>
+</div>
+
 <div class="paper-list">
-    {% for article in news %}
+    {% for item in news %}
     <div class="card">
-        <h3>{{ article.title }}</h3>
-        <p><strong>Published:</strong> {{ article.date }}</p>
-        <a href="{{ article.link }}" target="_blank" class="btn">Read Article</a>
+        <h3>{{ item.title }}</h3>
+        <p><strong>Published:</strong> <span style="color: #a5b4fc;">{{ item.published }}</span></p>
+        <p style="margin-top: 15px; color: var(--text-main);">{{ item.summary[:300] }}...</p>
+
+        <div class="actions">
+            <a href="{{ item.link }}" target="_blank" class="btn">Read Full Article 🔗</a>
+        </div>
     </div>
     {% endfor %}
 </div>

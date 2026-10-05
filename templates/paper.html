@@ -1,33 +1,71 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<h1>{{ paper.title }}</h1>
-<a href="{{ paper.pdf_url }}" target="_blank" class="btn">Download Original PDF</a>
+<a href="/"
+    style="color: var(--accent); text-decoration: none; display: inline-block; margin-bottom: 20px; font-weight: 600;">←
+    Back to Papers</a>
 
-<div class="ai-box">
-    <h3>AI Breakdown:</h3>
-    <pre>{{ explanation }}</pre>
-</div>
+<div class="card" style="padding: 40px;">
+    <h1
+        style="background: linear-gradient(135deg, #a5b4fc, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 0;">
+        {{ paper.title }}</h1>
+    <p><strong>Authors:</strong> <span style="color: #a5b4fc;">{{ paper.authors }}</span></p>
+    <p><strong>Date:</strong> {{ paper.date }}</p>
 
-<div class="chat-box">
-    <h3>Ask a question about this paper:</h3>
-    <input type="text" id="question" placeholder="E.g., What dataset did they use?">
-    <button onclick="askQuestion()" class="btn">Ask</button>
-    <div id="chat-response"></div>
+    <div class="actions" style="margin-bottom: 30px;">
+        <a href="{{ paper.pdf_url }}" target="_blank" class="btn">View Original PDF</a>
+    </div>
+
+    <h3 style="color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px;">Abstract</h3>
+    <p style="line-height: 1.8; color: #cbd5e1;">{{ paper.abstract }}</p>
+
+    <div class="ai-box">
+        <h3>✨ AI Explanation (Simplified)</h3>
+        <pre>{{ explanation }}</pre>
+    </div>
+
+    <div class="chat-box">
+        <h3>💬 Ask a Question</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Ask the AI anything about this
+            specific paper.</p>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="question" placeholder="e.g., What is the main conclusion?">
+            <button onclick="askQuestion()" class="btn" id="askBtn">Ask AI</button>
+        </div>
+        <div id="chat-response" style="display: none;"></div>
+    </div>
 </div>
 
 <script>
     function askQuestion() {
         const question = document.getElementById('question').value;
-        document.getElementById('chat-response').innerText = "AI is thinking...";
+        if (!question) return;
+
+        const responseDiv = document.getElementById('chat-response');
+        const askBtn = document.getElementById('askBtn');
+
+        responseDiv.style.display = 'block';
+        responseDiv.innerHTML = '<span style="color: var(--accent);">Thinking... ⏳</span>';
+        askBtn.disabled = true;
+        askBtn.style.opacity = '0.5';
 
         fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paper_id: '{{ paper.id }}', question: question })
+            body: JSON.stringify({
+                paper_id: '{{ paper.id }}',
+                question: question
+            })
         })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('chat-response').innerText = data.answer;
+                responseDiv.innerHTML = '<strong>Answer:</strong><br>' + data.answer.replace(/\n/g, '<br>');
+                askBtn.disabled = false;
+                askBtn.style.opacity = '1';
+            })
+            .catch(err => {
+                responseDiv.innerHTML = '<span style="color: #ef4444;">Error getting answer. Please try again.</span>';
+                askBtn.disabled = false;
+                askBtn.style.opacity = '1';
             });
     }
 </script>
