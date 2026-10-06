@@ -8,28 +8,25 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Safe getters for API clients
 def get_gemini_client():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return None
-    return genai.Client(api_key=api_key)
+        return None, "GEMINI_API_KEY is missing from Render environment variables"
+    return genai.Client(api_key=api_key), None
 
 def get_groq_client():
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        return None
-    return Groq(api_key=api_key)
+        return None, "GROQ_API_KEY is missing from Render environment variables"
+    return Groq(api_key=api_key), None
 
 def fetch_daily_papers():
     arxiv_client = arxiv.Client(page_size=10, delay_seconds=3, num_retries=1)
-    
     search = arxiv.Search(
-        query='all:"generative ai" OR all:"natural language processing" OR all:"LLM" OR all:"NLP"', 
+        query='all:"generative ai" OR all:"natural language processing" OR all:"LLM" OR all:"NLP"',
         max_results=10,
         sort_by=arxiv.SortCriterion.SubmittedDate
     )
-    
     papers = []
     for result in arxiv_client.results(search):
         papers.append({
@@ -45,7 +42,6 @@ def fetch_daily_papers():
 def fetch_ai_news():
     feed_url = 'https://hnrss.org/newest?q=AI+OR+Machine+Learning+OR+LLM'
     feed = feedparser.parse(feed_url)
-    
     news = []
     for entry in feed.entries[:10]:
         news.append({
@@ -59,7 +55,6 @@ def fetch_ai_news():
 def fetch_paper_by_id(paper_id):
     arxiv_client = arxiv.Client()
     search = arxiv.Search(id_list=[paper_id])
-    
     try:
         result = next(arxiv_client.results(search))
         return {
@@ -74,65 +69,78 @@ def fetch_paper_by_id(paper_id):
         return None
 
 def analyze_paper_with_ai(abstract):
-    # 1. TRY GROQ FIRST (Ultra-fast Llama 3)
-    groq_client = get_groq_client()
-    if groq_client:
+    error_log = []
+
+    # ---- STEP 1: TRY GROQ ----
+    groq_client, groq_init_error = get_groq_client()
+    if groq_init_error:
+        error_log.append(f"Groq Init: {groq_init_error}")
+    else:
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are a helpful AI assistant. Explain research papers simply for beginners."},
                     {"role": "user", "content": f"Explain this AI research paper abstract:\n\n{abstract}"}
                 ],
-                model="llama3-8b-8192", # Lightning fast free model
+                model="llama3-8b-8192",
             )
             return chat_completion.choices[0].message.content
-        except Exception:
-            pass # If Groq fails, silently move to Gemini backup
+        except Exception as e:
+            error_log.append(f"Groq API Error: {str(e)}")
 
-    # 2. FALLBACK TO GEMINI 
-    gemini_client = get_gemini_client()
-    if gemini_client:
-        models = ['gemini-1.5-flash', 'gemini-2.0-flash-exp']
-        for model in models:
+    # ---- STEP 2: TRY GEMINI ----
+    gemini_client, gemini_init_error = get_gemini_client()
+    if gemini_init_error:
+        error_log.append(f"Gemini Init: {gemini_init_error}")
+    else:
+        gemini_models = ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash']
+        for model in gemini_models:
             try:
                 response = gemini_client.models.generate_content(
-                    model=model, 
+                    model=model,
                     contents=f"Explain this AI research paper abstract simply:\n\n{abstract}"
                 )
                 return response.text
-            except Exception:
-                continue
-                
-    return "Both Groq and Gemini AI servers are currently busy. Please refresh the page in a moment to try again."
+            except Exception as e:
+                error_log.append(f"Gemini [{model}]: {str(e)}")
+
+    # ---- ALL FAILED: Show exact errors ----
+    return "ALL AI ATTEMPTS FAILED. Here is exactly why:\n\n" + "\n\n".join(error_log)
 
 def chat_about_paper(abstract, question):
-    # 1. TRY GROQ FIRST
-    groq_client = get_groq_client()
-    if groq_client:
+    error_log = []
+
+    # ---- STEP 1: TRY GROQ ----
+    groq_client, groq_init_error = get_groq_client()
+    if groq_init_error:
+        error_log.append(f"Groq Init: {groq_init_error}")
+    else:
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You answer questions about AI research papers based on the provided abstract."},
-                    {"role": "user", "content": f"Context (Paper Abstract): {abstract}\n\nQuestion: {question}"}
+                    {"role": "system", "content": "You answer questions about AI research papers."},
+                    {"role": "user", "content": f"Context: {abstract}\n\nQuestion: {question}"}
                 ],
                 model="llama3-8b-8192",
             )
             return chat_completion.choices[0].message.content
-        except Exception:
-            pass
+        except Exception as e:
+            error_log.append(f"Groq API Error: {str(e)}")
 
-    # 2. FALLBACK TO GEMINI
-    gemini_client = get_gemini_client()
-    if gemini_client:
-        models = ['gemini-1.5-flash', 'gemini-2.0-flash-exp']
-        for model in models:
+    # ---- STEP 2: TRY GEMINI ----
+    gemini_client, gemini_init_error = get_gemini_client()
+    if gemini_init_error:
+        error_log.append(f"Gemini Init: {gemini_init_error}")
+    else:
+        gemini_models = ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash']
+        for model in gemini_models:
             try:
                 response = gemini_client.models.generate_content(
-                    model=model, 
-                    contents=f"Context (Paper Abstract): {abstract}\n\nQuestion: {question}\n\nAnswer:"
+                    model=model,
+                    contents=f"Context: {abstract}\n\nQuestion: {question}\n\nAnswer:"
                 )
                 return response.text
-            except Exception:
-                continue
-                
-    return "Both Groq and Gemini AI servers are currently busy. Please try asking again in 10 seconds."
+            except Exception as e:
+                error_log.append(f"Gemini [{model}]: {str(e)}")
+
+    return "ALL AI ATTEMPTS FAILED. Here is exactly why:\n\n" + "\n\n".join(error_log)
