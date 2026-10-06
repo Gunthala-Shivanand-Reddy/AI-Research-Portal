@@ -1,16 +1,17 @@
 import arxiv
 import feedparser
 import os
+import time
 from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Safe getter for Gemini Client so the server doesn't crash on startup!
+# Safe getter for Gemini client to prevent startup crashes if key is missing
 def get_gemini_client():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("Missing GEMINI_API_KEY. Check Render Dashboard!")
+        raise ValueError("GEMINI_API_KEY is missing from environment variables!")
     return genai.Client(api_key=api_key)
 
 def fetch_daily_papers():
@@ -35,66 +36,75 @@ def fetch_daily_papers():
     return papers
 
 def fetch_ai_news():
-    # Updated URL to specifically search for Generative AI and NLP news
-    url = 'https://news.google.com/rss/search?q=%22Generative+AI%22+OR+%22Natural+Language+Processing%22+OR+LLM&hl=en-US&gl=US&ceid=US:en'
-    feed = feedparser.parse(url)
+    feed_url = 'https://hnrss.org/newest?q=AI+OR+Machine+Learning+OR+LLM'
+    feed = feedparser.parse(feed_url)
+    
     news = []
-    for entry in feed.entries[:15]:
+    for entry in feed.entries[:10]:
         news.append({
             'title': entry.title,
             'link': entry.link,
-            'date': entry.published
+            'published': entry.get('published', 'Recently'),
+            'summary': entry.get('summary', 'No summary available.')
         })
     return news
 
-def analyze_paper_with_ai(abstract):
-    client = get_gemini_client()
-    prompt = f"""
-    You are an AI expert. Analyze this research paper abstract:
-    {abstract}
-    
-    1. Give a relevance score (0-100%) on how much this relates specifically to Generative AI, Large Language Models, and NLP.
-    2. Write a Simple Summary (understandable by a beginner).
-    3. Write a Detailed Explanation (for a developer/researcher).
-    
-    Format your response EXACTLY like this:
-    Relevance Score: [Score]%
-    Simple Summary: [Your simple summary]
-    Detailed Explanation: [Your detailed explanation]
-    """
-    
-    response = client.models.generate_content(
-        model='gemini-3.6-flash',
-        contents=prompt,
-    )
-    return response.text
-
-def chat_about_paper(abstract, user_question):
-    client = get_gemini_client()
-    prompt = f"""
-    Context: Research Paper Abstract: {abstract}
-    User Question: {user_question}
-    Answer the question based ONLY on the context of this research paper. Keep it simple and helpful.
-    """
-    response = client.models.generate_content(
-        model='gemini-3.6-flash',
-        contents=prompt,
-    )
-    return response.text
-
 def fetch_paper_by_id(paper_id):
-    import arxiv
+    arxiv_client = arxiv.Client()
     search = arxiv.Search(id_list=[paper_id])
+    
     try:
-        # Get just this specific paper
-        result = next(arxiv.Client().results(search))
+        result = next(arxiv_client.results(search))
         return {
             'id': result.entry_id.split('/')[-1],
             'title': result.title,
             'authors': ', '.join([author.name for author in result.authors]),
-            'date': result.published.strftime("%Y-%m-%d"),
             'abstract': result.summary,
-            'pdf_url': result.pdf_url
+            'pdf_url': result.pdf_url,
+            'date': result.published.strftime("%Y-%m-%d")
         }
-    except Exception:
+    except StopIteration:
         return None
+
+def analyze_paper_with_ai(abstract):
+    client = get_gemini_client()
+    # FALLBACK CHAIN: It will try these models in order
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    
+    for model in models_to_try:
+        for attempt in range(2): # Try each model 2 times before giving up on it
+            try:
+                prompt = f"Explain this AI research paper abstract in simple terms for a beginner:\n\n{abstract}"
+                response = client.models.generate_content(model=model, contents=prompt)
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+                # If it is a 503 Busy or 429 Rate Limit, wait 2 seconds and try again
+                if "503" in error_str or "429" in error_str:
+                    time.sleep(2)
+                    continue
+                else:
+                    break # If it's a different error, move immediately to the next model
+                    
+    # If ALL models and ALL retries fail:
+    raise Exception("All AI servers are currently experiencing massive global traffic. Please refresh the page in 1 minute.")
+
+def chat_about_paper(abstract, question):
+    client = get_gemini_client()
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    
+    for model in models_to_try:
+        for attempt in range(2):
+            try:
+                prompt = f"Context (Paper Abstract): {abstract}\n\nQuestion: {question}\n\nAnswer:"
+                response = client.models.generate_content(model=model, contents=prompt)
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+                if "503" in error_str or "429" in error_str:
+                    time.sleep(2)
+                    continue
+                else:
+                    break
+                    
+    raise Exception("All AI servers are currently experiencing massive global traffic. Please try again in 1 minute.")
