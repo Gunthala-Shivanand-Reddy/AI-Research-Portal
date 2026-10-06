@@ -152,8 +152,9 @@ def view_paper(paper_id):
         papers_db[paper_id] = paper
     try:
         explanation = services.analyze_paper_with_ai(paper['abstract'])
-    except Exception:
-        explanation = "AI is currently busy. Please refresh the page to try again."
+    except Exception as e:
+        # THIS WILL SHOW US THE REAL ERROR ON THE SCREEN
+        explanation = f"GEMINI ERROR: {str(e)}"
     return render_template('paper.html', paper=paper, explanation=explanation)
 
 @app.route('/chat', methods=['POST'])
@@ -166,8 +167,9 @@ def chat():
         paper = services.fetch_paper_by_id(paper_id)
     try:
         answer = services.chat_about_paper(paper['abstract'], question)
-    except Exception:
-        answer = "The AI is currently busy. Please try again in a moment."
+    except Exception as e:
+        # THIS WILL SHOW US THE REAL ERROR ON THE SCREEN
+        answer = f"GEMINI ERROR: {str(e)}"
     return jsonify({"answer": answer})
 
 if __name__ == '__main__':
