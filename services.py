@@ -68,30 +68,30 @@ def fetch_paper_by_id(paper_id):
 
 def analyze_paper_with_ai(abstract):
     client = get_gemini_client()
-    # FALLBACK CHAIN: It will try these models in order
     models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    last_error = ""
     
     for model in models_to_try:
-        for attempt in range(2): # Try each model 2 times before giving up on it
+        for attempt in range(2): 
             try:
                 prompt = f"Explain this AI research paper abstract in simple terms for a beginner:\n\n{abstract}"
                 response = client.models.generate_content(model=model, contents=prompt)
                 return response.text
             except Exception as e:
-                error_str = str(e)
-                # If it is a 503 Busy or 429 Rate Limit, wait 2 seconds and try again
-                if "503" in error_str or "429" in error_str:
+                last_error = str(e)
+                if "503" in last_error or "429" in last_error:
                     time.sleep(2)
                     continue
                 else:
-                    break # If it's a different error, move immediately to the next model
+                    break # Hard error, move to next model
                     
-    # If ALL models and ALL retries fail:
-    raise Exception("All AI servers are currently experiencing massive global traffic. Please refresh the page in 1 minute.")
+    # THIS WILL NOW SHOW US THE EXACT GOOGLE ERROR
+    raise Exception(f"REAL ERROR: {last_error}")
 
 def chat_about_paper(abstract, question):
     client = get_gemini_client()
     models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    last_error = ""
     
     for model in models_to_try:
         for attempt in range(2):
@@ -100,11 +100,12 @@ def chat_about_paper(abstract, question):
                 response = client.models.generate_content(model=model, contents=prompt)
                 return response.text
             except Exception as e:
-                error_str = str(e)
-                if "503" in error_str or "429" in error_str:
+                last_error = str(e)
+                if "503" in last_error or "429" in last_error:
                     time.sleep(2)
                     continue
                 else:
                     break
                     
-    raise Exception("All AI servers are currently experiencing massive global traffic. Please try again in 1 minute.")
+    # THIS WILL NOW SHOW US THE EXACT GOOGLE ERROR
+    raise Exception(f"REAL ERROR: {last_error}")
