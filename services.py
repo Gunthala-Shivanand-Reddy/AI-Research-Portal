@@ -68,61 +68,103 @@ def fetch_paper_by_id(paper_id):
         return None
 
 def analyze_paper_with_ai(abstract):
-    # PRIMARY: Groq with llama-3.1-8b-instant (current active model)
+    prompt = f"Explain this AI research paper abstract in simple, clear terms for a beginner:\n\n{abstract}"
+
+    # PRIMARY: Groq - qwen3.8-27b (confirmed available from your account)
     groq_client = get_groq_client()
     if groq_client:
         try:
             result = groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are a helpful AI assistant. Explain research papers simply for beginners."},
-                    {"role": "user", "content": f"Explain this AI research paper abstract in simple terms:\n\n{abstract}"}
+                    {"role": "user", "content": prompt}
                 ],
-                model="llama-3.1-8b-instant",
+                model="qwen/qwen3.8-27b",
             )
             return result.choices[0].message.content
-        except Exception as e:
-            pass
+        except Exception:
+            # Backup Groq model
+            try:
+                result = groq_client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are a helpful AI assistant. Explain research papers simply for beginners."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="openai/gpt-oss-20b",
+                )
+                return result.choices[0].message.content
+            except Exception:
+                pass
 
-    # FALLBACK: Gemini 3.8 Flash (current active model per Google's own error message)
+    # FALLBACK: Gemini - gemini-2.5-flash (confirmed available from your account)
     gemini_client = get_gemini_client()
     if gemini_client:
         try:
             response = gemini_client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=f"Explain this AI research paper abstract in simple terms:\n\n{abstract}"
+                model="models/gemini-2.5-flash",
+                contents=prompt
             )
             return response.text
-        except Exception as e:
-            pass
+        except Exception:
+            # Backup Gemini model
+            try:
+                response = gemini_client.models.generate_content(
+                    model="models/gemini-3.8-flash",
+                    contents=prompt
+                )
+                return response.text
+            except Exception:
+                pass
 
     return "AI is temporarily unavailable. Please refresh the page."
 
 def chat_about_paper(abstract, question):
-    # PRIMARY: Groq with llama-3.1-8b-instant
+    prompt = f"Paper Abstract: {abstract}\n\nQuestion: {question}"
+
+    # PRIMARY: Groq - qwen3.8-27b (confirmed available from your account)
     groq_client = get_groq_client()
     if groq_client:
         try:
             result = groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You answer questions about AI research papers clearly and simply."},
-                    {"role": "user", "content": f"Paper Abstract: {abstract}\n\nQuestion: {question}"}
+                    {"role": "user", "content": prompt}
                 ],
-                model="llama-3.1-8b-instant",
+                model="qwen/qwen3.8-27b",
             )
             return result.choices[0].message.content
-        except Exception as e:
-            pass
+        except Exception:
+            # Backup Groq model
+            try:
+                result = groq_client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You answer questions about AI research papers clearly and simply."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="openai/gpt-oss-20b",
+                )
+                return result.choices[0].message.content
+            except Exception:
+                pass
 
-    # FALLBACK: Gemini 3.8 Flash
+    # FALLBACK: Gemini - gemini-2.5-flash (confirmed available from your account)
     gemini_client = get_gemini_client()
     if gemini_client:
         try:
             response = gemini_client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=f"Paper Abstract: {abstract}\n\nQuestion: {question}\n\nAnswer:"
+                model="models/gemini-2.5-flash",
+                contents=prompt + "\n\nAnswer:"
             )
             return response.text
-        except Exception as e:
-            pass
+        except Exception:
+            # Backup Gemini model
+            try:
+                response = gemini_client.models.generate_content(
+                    model="models/gemini-3.8-flash",
+                    contents=prompt + "\n\nAnswer:"
+                )
+                return response.text
+            except Exception:
+                pass
 
     return "AI is temporarily unavailable. Please try again in a moment."
