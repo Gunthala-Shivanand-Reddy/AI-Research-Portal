@@ -68,7 +68,8 @@ def fetch_paper_by_id(paper_id):
 
 def analyze_paper_with_ai(abstract):
     client = get_gemini_client()
-    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    # Updated to the newest models!
+    models_to_try = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro']
     last_error = ""
     
     for model in models_to_try:
@@ -80,17 +81,17 @@ def analyze_paper_with_ai(abstract):
             except Exception as e:
                 last_error = str(e)
                 if "503" in last_error or "429" in last_error:
-                    time.sleep(2)
+                    time.sleep(3) # Wait 3 seconds to let Google's servers breathe
                     continue
                 else:
-                    break # Hard error, move to next model
+                    break # If it's a 404 (model deleted), instantly move to the next model!
                     
-    # THIS WILL NOW SHOW US THE EXACT GOOGLE ERROR
-    raise Exception(f"REAL ERROR: {last_error}")
+    # If it fails everything, return a clean error
+    return f"We are experiencing high traffic right now. Please wait a moment and refresh. (Debug: {last_error})"
 
 def chat_about_paper(abstract, question):
     client = get_gemini_client()
-    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
+    models_to_try = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro']
     last_error = ""
     
     for model in models_to_try:
@@ -102,10 +103,9 @@ def chat_about_paper(abstract, question):
             except Exception as e:
                 last_error = str(e)
                 if "503" in last_error or "429" in last_error:
-                    time.sleep(2)
+                    time.sleep(3)
                     continue
                 else:
                     break
                     
-    # THIS WILL NOW SHOW US THE EXACT GOOGLE ERROR
-    raise Exception(f"REAL ERROR: {last_error}")
+    return f"We are experiencing high traffic right now. Please try asking again in 10 seconds. (Debug: {last_error})"
