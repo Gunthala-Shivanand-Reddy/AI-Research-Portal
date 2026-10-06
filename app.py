@@ -17,7 +17,8 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 def require_login():
     session.permanent = True
     allowed = ['login', 'signup', 'auth_callback', 'verify_token',
-               'forgot_password', 'reset_password', 'update_password', 'static']
+               'forgot_password', 'reset_password', 'update_password',
+               'debug_models', 'static']
     if request.endpoint in allowed:
         return
     if not session.get('logged_in'):
@@ -153,8 +154,7 @@ def view_paper(paper_id):
     try:
         explanation = services.analyze_paper_with_ai(paper['abstract'])
     except Exception as e:
-        # THIS WILL SHOW US THE REAL ERROR ON THE SCREEN
-        explanation = f"GEMINI ERROR: {str(e)}"
+        explanation = f"Error: {str(e)}"
     return render_template('paper.html', paper=paper, explanation=explanation)
 
 @app.route('/chat', methods=['POST'])
@@ -168,9 +168,44 @@ def chat():
     try:
         answer = services.chat_about_paper(paper['abstract'], question)
     except Exception as e:
-        # THIS WILL SHOW US THE REAL ERROR ON THE SCREEN
-        answer = f"GEMINI ERROR: {str(e)}"
+        answer = f"Error: {str(e)}"
     return jsonify({"answer": answer})
+
+# ===== DEBUG ROUTE (find working model names) =====
+@app.route('/debug-models')
+def debug_models():
+    output = []
+
+    # Check Groq models
+    try:
+        from groq import Groq
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            g = Groq(api_key=groq_key)
+            models = g.models.list()
+            output.append("=== GROQ AVAILABLE MODELS ===")
+            for m in models.data:
+                output.append(m.id)
+        else:
+            output.append("ERROR: GROQ_API_KEY not found in environment!")
+    except Exception as e:
+        output.append(f"Groq error: {str(e)}")
+
+    # Check Gemini models
+    try:
+        from google import genai
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key:
+            gc = genai.Client(api_key=gemini_key)
+            output.append("\n=== GEMINI AVAILABLE MODELS ===")
+            for m in gc.models.list():
+                output.append(m.name)
+        else:
+            output.append("ERROR: GEMINI_API_KEY not found in environment!")
+    except Exception as e:
+        output.append(f"Gemini error: {str(e)}")
+
+    return "<pre style='font-size:16px; padding:30px;'>" + "\n".join(output) + "</pre>"
 
 if __name__ == '__main__':
     app.run(debug=False, port=5000)
