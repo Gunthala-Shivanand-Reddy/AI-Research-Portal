@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from datetime import timedelta
+from datetime import timedelta, datetime
 import services
 import database
 import os
@@ -11,6 +11,29 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback-secret-key-123")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=10)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+# ===== PAPER CACHE (so ArXiv is not called on every page load) =====
+paper_cache = {
+    'papers': [],
+    'last_fetched': None
+}
+papers_db = {}
+
+def get_cached_papers():
+    now = datetime.now()
+    # Only fetch from ArXiv if cache is empty or older than 3 hours
+    if not paper_cache['papers'] or not paper_cache['last_fetched'] or \
+       (now - paper_cache['last_fetched']).seconds > 10800:
+        try:
+            fresh_papers = services.fetch_daily_papers()
+            if fresh_papers:
+                paper_cache['papers'] = fresh_papers
+                paper_cache['last_fetched'] = now
+                for p in fresh_papers:
+                    papers_db[p['id']] = p
+        except Exception:
+            pass  # If ArXiv fails, just use the old cache
+    return paper_cache['papers']
 
 # ===== LOGIN GUARD =====
 @app.before_request
@@ -128,13 +151,11 @@ def update_password():
         return jsonify({"success": False, "error": str(e)})
 
 # ===== MAIN ROUTES =====
-papers_db = {}
 
 @app.route('/')
 def dashboard():
-    raw_papers = services.fetch_daily_papers()
-    for p in raw_papers:
-        papers_db[p['id']] = p
+    # Uses cache - ArXiv only called once every 3 hours!
+    raw_papers = get_cached_papers()
     user_name = session.get('user_name', 'Researcher')
     return render_template('index.html', papers=raw_papers, user_name=user_name)
 
@@ -171,12 +192,10 @@ def chat():
         answer = f"Error: {str(e)}"
     return jsonify({"answer": answer})
 
-# ===== DEBUG ROUTE (find working model names) =====
+# ===== DEBUG ROUTE =====
 @app.route('/debug-models')
 def debug_models():
     output = []
-
-    # Check Groq models
     try:
         from groq import Groq
         groq_key = os.getenv("GROQ_API_KEY")
@@ -187,11 +206,9 @@ def debug_models():
             for m in models.data:
                 output.append(m.id)
         else:
-            output.append("ERROR: GROQ_API_KEY not found in environment!")
+            output.append("ERROR: GROQ_API_KEY not found!")
     except Exception as e:
         output.append(f"Groq error: {str(e)}")
-
-    # Check Gemini models
     try:
         from google import genai
         gemini_key = os.getenv("GEMINI_API_KEY")
@@ -201,10 +218,9 @@ def debug_models():
             for m in gc.models.list():
                 output.append(m.name)
         else:
-            output.append("ERROR: GEMINI_API_KEY not found in environment!")
+            output.append("ERROR: GEMINI_API_KEY not found!")
     except Exception as e:
         output.append(f"Gemini error: {str(e)}")
-
     return "<pre style='font-size:16px; padding:30px;'>" + "\n".join(output) + "</pre>"
 
 if __name__ == '__main__':
